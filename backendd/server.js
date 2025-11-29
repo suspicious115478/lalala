@@ -52,7 +52,7 @@ app.post('/sync', async (req, res) => {
     // If you expect only the latest or only one - adapt query accordingly
     const { data, error } = await supabase
       .from('dispatch')
-      .select('id, request_address, created_at')
+      .select('request_address')
       .eq('admin_id', admin_id)
       .order('created_at', { ascending: true });
 
@@ -97,3 +97,4 @@ app.get('/', (req, res) => res.send('Supabase → Firebase sync running'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
