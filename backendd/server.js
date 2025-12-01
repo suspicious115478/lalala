@@ -222,41 +222,73 @@ app.post('/sync', async (req, res) => {
       return res.json({ message: "No dispatches in the 1-hour window" });
     }
 
-    // ===================================================
-    // 🔥 SINGLE MODE
-    // ===================================================
-    if (mode === "single") {
-      const latest = filtered[filtered.length - 1];
+   // ===================================================
+// 🔥 SINGLE MODE
+// ===================================================
+if (mode === "single") {
+  const latest = filtered[filtered.length - 1];
 
-      console.log("[FIREBASE] Writing SINGLE row to task_details/latest");
+  console.log("[FIREBASE] Writing SINGLE row to task_details/latest");
 
-      await db.ref(`dispatches/${admin_id}/task_details/latest`).set(latest);
+  await db.ref(`dispatches/${admin_id}/task_details/latest`).set(latest);
 
-      // Mark new task
-      await db.ref(`dispatches/${admin_id}/new_task`).set(true);
+  // Mark new task
+  await db.ref(`dispatches/${admin_id}/new_task`).set(true);
 
-      return res.json({
-        written: latest,
-        count: 1
-      });
-    }
+  // ----------------------------
+  //  🔥 Update Supabase admin_id → Fd12
+  // ----------------------------
+  const newAdminId = "Fd" + admin_id;
+  await supabase
+    .from("dispatch")
+    .update({ admin_id: newAdminId })
+    .eq("order_id", latest.order_id);
 
-    // ===================================================
-    // 🔥 ALL MODE
-    // ===================================================
-    console.log("[FIREBASE] Writing ALL rows to task_details...");
+  console.log("[SUPABASE] Updated admin_id →", newAdminId);
 
-    const updates = {};
-    filtered.forEach((row, index) => {
-      updates[`dispatches/${admin_id}/task_details/${index}`] = row;
-    });
+  return res.json({
+    written: latest,
+    updated_admin_id: newAdminId,
+    count: 1
+  });
+}
 
-    // mark new task
-    updates[`dispatches/${admin_id}/new_task`] = true;
+// ===================================================
+// 🔥 ALL MODE
+// ===================================================
+console.log("[FIREBASE] Writing ALL rows to task_details...");
 
-    await db.ref().update(updates);
+const updates = {};
+filtered.forEach((row, index) => {
+  updates[`dispatches/${admin_id}/task_details/${index}`] = row;
+});
 
-    console.log("[FIREBASE] 🟢 Time-filtered rows synced");
+// mark new task
+updates[`dispatches/${admin_id}/new_task`] = true;
+
+await db.ref().update(updates);
+
+console.log("[FIREBASE] 🟢 Time-filtered rows synced");
+
+// ----------------------------
+// 🔥 Update ALL matched rows admin_id → Fd12
+// ----------------------------
+const newAdminId = "Fd" + admin_id;
+
+const orderIds = filtered.map(r => r.order_id);
+
+await supabase
+  .from("dispatch")
+  .update({ admin_id: newAdminId })
+  .in("order_id", orderIds);
+
+console.log("[SUPABASE] Updated", filtered.length, "rows to admin_id", newAdminId);
+
+return res.json({
+  written_count: filtered.length,
+  updated_admin_id: newAdminId
+});
+
 
     res.json({
       written_count: filtered.length
@@ -274,6 +306,7 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
