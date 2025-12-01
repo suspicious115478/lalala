@@ -104,6 +104,7 @@ app.post('/signup', async (req, res) => {
 
 // -------------- SYNC ENDPOINT (Supabase → Firebase) --------------
 // -------------- SYNC ENDPOINT (Supabase → Firebase) --------------
+// -------------- SYNC ENDPOINT (Supabase → Firebase) --------------
 app.post('/sync', async (req, res) => {
   try {
     const { admin_id, mode } = req.body;
@@ -114,7 +115,7 @@ app.post('/sync', async (req, res) => {
 
     console.log("[SYNC] 🔵 admin_id:", admin_id, "mode:", mode);
 
-    // Fetch full row from Supabase including schedule_time
+    // Fetch rows from Supabase
     const { data, error } = await supabase
       .from('dispatch')
       .select(`
@@ -133,43 +134,37 @@ app.post('/sync', async (req, res) => {
       .eq('admin_id', admin_id);
 
     if (error) return res.status(500).json({ error: error.message });
-    if (!data || data.length === 0) return res.status(404).json({ message: "No rows for admin_id" });
+    if (!data || data.length === 0) {
+      return res.status(404).json({ message: "No rows for admin_id" });
+    }
 
     console.log(`[SYNC] 🟢 Rows fetched: ${data.length}`);
 
     // ------------------- TIME FILTER LOGIC -------------------
     const now = new Date();
 
-    // Convert "2:00 PM" → Date object for today
     function parseTimeToToday(timeStr) {
-  const [time, modifier] = timeStr.split(" ");
-  let [hours, minutes] = time.split(":").map(Number);
+      const [time, modifier] = timeStr.split(" ");
+      let [hours, minutes] = time.split(":").map(Number);
 
-  // Convert 12-hour -> 24-hour format
-  if (modifier === "PM" && hours !== 12) hours += 12;
-  if (modifier === "AM" && hours === 12) hours = 0;
+      if (modifier === "PM" && hours !== 12) hours += 12;
+      if (modifier === "AM" && hours === 12) hours = 0;
 
-  // Create date in LOCAL (India) time
-  const localDate = new Date();
-  localDate.setHours(hours, minutes, 0, 0);
+      const localDate = new Date();
+      localDate.setHours(hours, minutes, 0, 0);
 
-  // Convert LOCAL IST → UTC
-  const utcDate = new Date(localDate.getTime() - (5.5 * 60 * 60 * 1000));
+      // Convert LOCAL IST → UTC
+      return new Date(localDate.getTime() - 5.5 * 60 * 60 * 1000);
+    }
 
-  return utcDate;
-}
-
-
-    // Only keep rows within ± 1 hour
     const filtered = data.filter(row => {
       if (!row.schedule_time) return false;
 
       const scheduled = parseTimeToToday(row.schedule_time);
-
-      const diff = Math.abs(scheduled - now); // in milliseconds
+      const diff = Math.abs(scheduled - now);
       const oneHour = 60 * 60 * 1000;
 
-      return diff <= oneHour; // inside the ±1 hr window
+      return diff <= oneHour;
     });
 
     console.log(`[SYNC] 🟡 Rows after time filter: ${filtered.length}`);
@@ -178,13 +173,18 @@ app.post('/sync', async (req, res) => {
       return res.json({ message: "No dispatches in the 1-hour window" });
     }
 
-    // -------- SINGLE MODE (write the latest time-matched row) --------
+    // ===================================================
+    // 🔥 SINGLE MODE
+    // ===================================================
     if (mode === "single") {
       const latest = filtered[filtered.length - 1];
 
-      console.log("[FIREBASE] Writing SINGLE time-matched row");
+      console.log("[FIREBASE] Writing SINGLE row to task_details/latest");
 
-      await db.ref(`dispatches/${admin_id}/latest`).set(latest);
+      await db.ref(`dispatches/${admin_id}/task_details/latest`).set(latest);
+
+      // Mark new task
+      await db.ref(`dispatches/${admin_id}/new_task`).set(true);
 
       return res.json({
         written: latest,
@@ -192,13 +192,18 @@ app.post('/sync', async (req, res) => {
       });
     }
 
-    // -------- ALL MODE (write all filtered rows) --------
-    console.log("[FIREBASE] Writing ALL time-matched rows...");
+    // ===================================================
+    // 🔥 ALL MODE
+    // ===================================================
+    console.log("[FIREBASE] Writing ALL rows to task_details...");
 
     const updates = {};
     filtered.forEach((row, index) => {
-      updates[`dispatches/${admin_id}/items/${index}`] = row;
+      updates[`dispatches/${admin_id}/task_details/${index}`] = row;
     });
+
+    // mark new task
+    updates[`dispatches/${admin_id}/new_task`] = true;
 
     await db.ref().update(updates);
 
@@ -214,13 +219,13 @@ app.post('/sync', async (req, res) => {
   }
 });
 
-
 // -------------- HEALTH CHECK -------------------
 app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
