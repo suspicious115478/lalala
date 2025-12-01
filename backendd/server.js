@@ -142,16 +142,23 @@ app.post('/sync', async (req, res) => {
 
     // Convert "2:00 PM" → Date object for today
     function parseTimeToToday(timeStr) {
-      const [time, modifier] = timeStr.split(" ");
-      let [hours, minutes] = time.split(":").map(Number);
+  const [time, modifier] = timeStr.split(" ");
+  let [hours, minutes] = time.split(":").map(Number);
 
-      if (modifier === "PM" && hours !== 12) hours += 12;
-      if (modifier === "AM" && hours === 12) hours = 0;
+  // Convert 12-hour -> 24-hour format
+  if (modifier === "PM" && hours !== 12) hours += 12;
+  if (modifier === "AM" && hours === 12) hours = 0;
 
-      const date = new Date();
-      date.setHours(hours, minutes, 0, 0);
-      return date;
-    }
+  // Create date in LOCAL (India) time
+  const localDate = new Date();
+  localDate.setHours(hours, minutes, 0, 0);
+
+  // Convert LOCAL IST → UTC
+  const utcDate = new Date(localDate.getTime() - (5.5 * 60 * 60 * 1000));
+
+  return utcDate;
+}
+
 
     // Only keep rows within ± 1 hour
     const filtered = data.filter(row => {
@@ -214,5 +221,6 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
