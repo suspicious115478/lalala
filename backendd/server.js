@@ -75,35 +75,54 @@ app.post('/sync', async (req, res) => {
     const { admin_id, mode } = req.body;
 
     if (!admin_id) {
+      console.log("[SYNC] ❌ No admin_id provided");
       return res.status(400).json({ error: "admin_id required" });
     }
 
+    console.log("\n==============================");
+    console.log("[SYNC] 🔵 New Sync Request");
+    console.log("admin_id:", admin_id);
+    console.log("mode:", mode);
+    console.log("==============================");
+
     // Fetch Supabase data
+    console.log("[SUPABASE] 📡 Fetching rows for admin_id:", admin_id);
+
     const { data, error } = await supabase
       .from('dispatch')
       .select('request_address')
       .eq('admin_id', admin_id);
 
+    console.log("[SUPABASE] ↪️ Raw Response:", { data, error });
+
     if (error) {
-      console.error(error);
+      console.error("[SUPABASE] ❌ Error fetching:", error);
       return res.status(500).json({ error: "Error fetching from Supabase" });
     }
 
     if (!data || data.length === 0) {
+      console.log("[SUPABASE] ⚠️ No rows found for admin:", admin_id);
       return res.status(404).json({ message: "No rows for that admin_id" });
     }
+
+    console.log(`[SUPABASE] ✅ ${data.length} row(s) fetched`);
 
     // ---- SINGLE MODE ----
     if (mode === "single") {
       const latest = data[data.length - 1];
       const payload = { request_address: latest.request_address };
 
+      console.log("[FIREBASE] ✏️ Writing SINGLE latest address:", payload);
+
       await db.ref(`dispatches/${admin_id}/latest`).set(payload);
 
+      console.log("[FIREBASE] ✅ Write complete");
       return res.json({ written: payload });
     }
 
     // ---- ALL MODE ----
+    console.log("[FIREBASE] ✏️ Preparing ALL updates...");
+
     const updates = {};
     data.forEach((row, index) => {
       updates[`dispatches/${admin_id}/items/${index}`] = {
@@ -111,21 +130,27 @@ app.post('/sync', async (req, res) => {
       };
     });
 
+    console.log("[FIREBASE] 🔄 Batch Update:", updates);
+
     await db.ref().update(updates);
+
+    console.log("[FIREBASE] ✅ All rows written");
 
     res.json({ written_count: data.length });
 
   } catch (err) {
-    console.error(err);
+    console.error("[SERVER] ❌ Exception:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 // health check
 app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
