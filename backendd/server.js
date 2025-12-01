@@ -65,6 +65,52 @@ admin.initializeApp({
 
 // MAKE db GLOBAL (important!)
 const db = admin.database();
+// ------------------ LOGIN ENDPOINT ------------------
+app.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password)
+      return res.status(400).json({ error: "email and password required" });
+
+    // Firebase does not support password login directly
+    // So we use Firebase Auth REST API
+    const loginRes = await fetch(
+      "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + process.env.FIREBASE_WEB_API_KEY,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          returnSecureToken: true
+        })
+      }
+    );
+
+    const json = await loginRes.json();
+
+    if (json.error) {
+      return res.status(400).json({ error: json.error.message });
+    }
+
+    const uid = json.localId;
+
+    // Get admin_id from Firebase DB
+    const snap = await db.ref(`users/${uid}`).once("value");
+
+    return res.json({
+      uid,
+      email,
+      admin_id: snap.val().admin_id
+    });
+
+  } catch (err) {
+    console.error("[LOGIN] ❌ Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // ------------------ SIGNUP ENDPOINT ------------------
 app.post('/signup', async (req, res) => {
@@ -225,6 +271,7 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
