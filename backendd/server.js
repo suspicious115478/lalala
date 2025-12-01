@@ -70,13 +70,14 @@ app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password)
+    if (!email || !password) {
       return res.status(400).json({ error: "email and password required" });
+    }
 
-    // Firebase does not support password login directly
-    // So we use Firebase Auth REST API
+    const FIREBASE_WEB_API_KEY = "AIzaSyBhgsT6lEgV_5ap1L7--HNSrnb3qlyjTyg";
+
     const loginRes = await fetch(
-      "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + process.env.FIREBASE_WEB_API_KEY,
+      "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + FIREBASE_WEB_API_KEY,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -112,6 +113,7 @@ app.post('/login', async (req, res) => {
 });
 
 
+
 // ------------------ SIGNUP ENDPOINT ------------------
 app.post('/signup', async (req, res) => {
   try {
@@ -123,7 +125,7 @@ app.post('/signup', async (req, res) => {
 
     console.log("[SIGNUP] 🔵 Firebase Signup Request:", email, admin_id);
 
-    // Create user in Firebase Auth
+    // Create user in Firebase Auth (Admin SDK, no API key needed)
     const userRecord = await admin.auth().createUser({ email, password });
 
     console.log("[SIGNUP] 🟢 Firebase user created:", userRecord.uid);
@@ -142,6 +144,7 @@ app.post('/signup', async (req, res) => {
       email,
       admin_id
     });
+
   } catch (err) {
     console.error("[SIGNUP] ❌ Error:", err);
     res.status(500).json({ error: err.message });
@@ -271,6 +274,7 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
