@@ -1,3 +1,6 @@
+
+
+
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -17,8 +20,6 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // ------------ Init Firebase Admin --------------
-// ------------ Init Firebase Admin --------------
-
 const serviceAccount = {
   "type": "service_account",
   "project_id": "project-8812136035477954307",
@@ -34,8 +35,17 @@ const serviceAccount = {
 };
 
 
+
+// Initialize Firebase once
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: process.env.FIREBASE_DB_URL
+});
+
+// MAKE db GLOBAL (important!)
+const db = admin.database();
+
 // -------------- Endpoint -------------------
-// POST /sync  { admin_id: "admin123", mode: "single" | "all" }
 app.post('/sync', async (req, res) => {
   try {
     const { admin_id, mode } = req.body;
@@ -44,7 +54,7 @@ app.post('/sync', async (req, res) => {
       return res.status(400).json({ error: "admin_id required" });
     }
 
-    // Fetch only request_address from Supabase
+    // Fetch Supabase data
     const { data, error } = await supabase
       .from('dispatch')
       .select('request_address')
@@ -59,9 +69,9 @@ app.post('/sync', async (req, res) => {
       return res.status(404).json({ message: "No rows for that admin_id" });
     }
 
-    // ---- SINGLE MODE → only latest row ----
+    // ---- SINGLE MODE ----
     if (mode === "single") {
-      const latest = data[data.length - 1];  // latest row
+      const latest = data[data.length - 1];
       const payload = { request_address: latest.request_address };
 
       await db.ref(`dispatches/${admin_id}/latest`).set(payload);
@@ -69,7 +79,7 @@ app.post('/sync', async (req, res) => {
       return res.json({ written: payload });
     }
 
-    // ---- ALL MODE → write all request_address entries ----
+    // ---- ALL MODE ----
     const updates = {};
     data.forEach((row, index) => {
       updates[`dispatches/${admin_id}/items/${index}`] = {
@@ -92,5 +102,7 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
 
 
