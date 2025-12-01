@@ -114,7 +114,7 @@ app.post('/sync', async (req, res) => {
 
     console.log("[SYNC] 🔵 admin_id:", admin_id, "mode:", mode);
 
-    // Fetch full row from Supabase
+    // Fetch full row from Supabase including schedule_time
     const { data, error } = await supabase
       .from('dispatch')
       .select(`
@@ -127,7 +127,8 @@ app.post('/sync', async (req, res) => {
         ticket_id,
         customer_name,
         read_alert,
-        dispatched_at
+        dispatched_at,
+        schedule_time
       `)
       .eq('admin_id', admin_id);
 
@@ -136,31 +137,69 @@ app.post('/sync', async (req, res) => {
 
     console.log(`[SYNC] 🟢 Rows fetched: ${data.length}`);
 
-    // ---- SINGLE MODE ----
-    if (mode === "single") {
-      const latest = data[data.length - 1];
+    // ------------------- TIME FILTER LOGIC -------------------
+    const now = new Date();
 
-      console.log("[FIREBASE] Writing SINGLE latest row");
+    // Convert "2:00 PM" → Date object for today
+    function parseTimeToToday(timeStr) {
+      const [time, modifier] = timeStr.split(" ");
+      let [hours, minutes] = time.split(":").map(Number);
+
+      if (modifier === "PM" && hours !== 12) hours += 12;
+      if (modifier === "AM" && hours === 12) hours = 0;
+
+      const date = new Date();
+      date.setHours(hours, minutes, 0, 0);
+      return date;
+    }
+
+    // Only keep rows within ± 1 hour
+    const filtered = data.filter(row => {
+      if (!row.schedule_time) return false;
+
+      const scheduled = parseTimeToToday(row.schedule_time);
+
+      const diff = Math.abs(scheduled - now); // in milliseconds
+      const oneHour = 60 * 60 * 1000;
+
+      return diff <= oneHour; // inside the ±1 hr window
+    });
+
+    console.log(`[SYNC] 🟡 Rows after time filter: ${filtered.length}`);
+
+    if (filtered.length === 0) {
+      return res.json({ message: "No dispatches in the 1-hour window" });
+    }
+
+    // -------- SINGLE MODE (write the latest time-matched row) --------
+    if (mode === "single") {
+      const latest = filtered[filtered.length - 1];
+
+      console.log("[FIREBASE] Writing SINGLE time-matched row");
 
       await db.ref(`dispatches/${admin_id}/latest`).set(latest);
 
-      return res.json({ written: latest });
+      return res.json({
+        written: latest,
+        count: 1
+      });
     }
 
-    // ---- ALL MODE ----
-    console.log("[FIREBASE] Writing ALL rows...");
+    // -------- ALL MODE (write all filtered rows) --------
+    console.log("[FIREBASE] Writing ALL time-matched rows...");
 
     const updates = {};
-
-    data.forEach((row, index) => {
+    filtered.forEach((row, index) => {
       updates[`dispatches/${admin_id}/items/${index}`] = row;
     });
 
     await db.ref().update(updates);
 
-    console.log("[FIREBASE] 🟢 All rows synced");
+    console.log("[FIREBASE] 🟢 Time-filtered rows synced");
 
-    res.json({ written_count: data.length });
+    res.json({
+      written_count: filtered.length
+    });
 
   } catch (err) {
     console.error("[SYNC] ❌ Error:", err);
@@ -168,10 +207,12 @@ app.post('/sync', async (req, res) => {
   }
 });
 
+
 // -------------- HEALTH CHECK -------------------
 app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
