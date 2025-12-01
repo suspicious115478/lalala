@@ -13,7 +13,6 @@ app.use(bodyParser.json());
 // ------------ Init Supabase --------------
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // ------------ Init Firebase Admin --------------
@@ -58,103 +57,92 @@ VOs7NcAORudLTK5Gl6f/sJ8D7w==
   universe_domain: "googleapis.com"
 };
 
-
-
-
 // Initialize Firebase once
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: process.env.FIREBASE_DB_URL
+  databaseURL: "https://project-8812136035477954307-default-rtdb.firebaseio.com"
 });
 
 // MAKE db GLOBAL (important!)
 const db = admin.database();
 
-// -------------- Endpoint -------------------
+// ------------------ SIGNUP ENDPOINT ------------------
+app.post('/signup', async (req, res) => {
+  try {
+    const { email, password, admin_id } = req.body;
+
+    if (!email || !password || !admin_id) {
+      return res.status(400).json({ error: "email, password, admin_id required" });
+    }
+
+    console.log("[SIGNUP] 🔵 Firebase Signup Request:", email, admin_id);
+
+    // Create user in Firebase Auth
+    const userRecord = await admin.auth().createUser({ email, password });
+
+    console.log("[SIGNUP] 🟢 Firebase user created:", userRecord.uid);
+
+    // Save admin_id in Firebase DB
+    await db.ref(`users/${userRecord.uid}`).set({
+      email,
+      admin_id
+    });
+
+    console.log("[SIGNUP] ✅ admin_id saved in DB");
+
+    res.json({
+      message: "Signup successful",
+      uid: userRecord.uid,
+      email,
+      admin_id
+    });
+  } catch (err) {
+    console.error("[SIGNUP] ❌ Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------- SYNC ENDPOINT (Supabase → Firebase) --------------
 app.post('/sync', async (req, res) => {
   try {
     const { admin_id, mode } = req.body;
 
     if (!admin_id) {
-      console.log("[SYNC] ❌ No admin_id provided");
       return res.status(400).json({ error: "admin_id required" });
     }
 
-    console.log("\n==============================");
-    console.log("[SYNC] 🔵 New Sync Request");
-    console.log("admin_id:", admin_id);
-    console.log("mode:", mode);
-    console.log("==============================");
-
-    // Fetch Supabase data
-    console.log("[SUPABASE] 📡 Fetching rows for admin_id:", admin_id);
+    console.log("[SYNC] 🔵 admin_id:", admin_id, "mode:", mode);
 
     const { data, error } = await supabase
       .from('dispatch')
       .select('request_address')
       .eq('admin_id', admin_id);
 
-    console.log("[SUPABASE] ↪️ Raw Response:", { data, error });
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data || data.length === 0) return res.status(404).json({ message: "No rows for admin_id" });
 
-    if (error) {
-      console.error("[SUPABASE] ❌ Error fetching:", error);
-      return res.status(500).json({ error: "Error fetching from Supabase" });
-    }
-
-    if (!data || data.length === 0) {
-      console.log("[SUPABASE] ⚠️ No rows found for admin:", admin_id);
-      return res.status(404).json({ message: "No rows for that admin_id" });
-    }
-
-    console.log(`[SUPABASE] ✅ ${data.length} row(s) fetched`);
-
-    // ---- SINGLE MODE ----
     if (mode === "single") {
       const latest = data[data.length - 1];
-      const payload = { request_address: latest.request_address };
-
-      console.log("[FIREBASE] ✏️ Writing SINGLE latest address:", payload);
-
-      await db.ref(`dispatches/${admin_id}/latest`).set(payload);
-
-      console.log("[FIREBASE] ✅ Write complete");
-      return res.json({ written: payload });
+      await db.ref(`dispatches/${admin_id}/latest`).set({ request_address: latest.request_address });
+      return res.json({ written: latest });
     }
-
-    // ---- ALL MODE ----
-    console.log("[FIREBASE] ✏️ Preparing ALL updates...");
 
     const updates = {};
     data.forEach((row, index) => {
-      updates[`dispatches/${admin_id}/items/${index}`] = {
-        request_address: row.request_address
-      };
+      updates[`dispatches/${admin_id}/items/${index}`] = { request_address: row.request_address };
     });
 
-    console.log("[FIREBASE] 🔄 Batch Update:", updates);
-
     await db.ref().update(updates);
-
-    console.log("[FIREBASE] ✅ All rows written");
-
     res.json({ written_count: data.length });
-
   } catch (err) {
-    console.error("[SERVER] ❌ Exception:", err);
+    console.error("[SYNC] ❌ Error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-
-// health check
+// -------------- HEALTH CHECK -------------------
 app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 
+// -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
-
-
-
-
-
