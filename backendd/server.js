@@ -33,19 +33,6 @@ const serviceAccount = {
   "universe_domain": "googleapis.com"
 };
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://myproject-12345-default-rtdb.firebaseio.com"
-});
-
-const db = admin.database();
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: process.env.FIREBASE_DB_URL
-});
-
-const db = admin.database();
 
 // -------------- Endpoint -------------------
 // POST /sync  { admin_id: "admin123", mode: "single" | "all" }
@@ -105,4 +92,5 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
