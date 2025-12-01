@@ -1,6 +1,3 @@
-
-
-
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -24,7 +21,34 @@ const serviceAccount = {
   "type": "service_account",
   "project_id": "project-8812136035477954307",
   "private_key_id": "ad0f556321f06dca84badfffd75f0b1806877118",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCfQtr/MyH55CU1\nsIDj2iSxbnDvhzIMmLKnr47JJoPUgaRBlgQlHLGIVUIJCePNZyCByeG/8MXFjRUk\n9TzhvrEAL/ZDa3CVi5hFAZV1bmZYPS3bje3dHUMOY1Jj9Uv6JY6Z0lJ/fTJvZY3M\nqFtqSSTnDB4MS8fq67V3sd0p86V9jTeVnDqox0DRBS4BpjFMuJPKtPlpOwdO7ECR\n09FgIDfEdZ3cVHlEgdLGhN0rpPd717XTg2c3CLbRK6PMJcuO0wW8VZ9Bps+pKZG4\n5UPeEhPYRVOw6/z4Lk51DWzacQhflemSa+zqjI+95MPhMNFq0775PmcUI0GGNpBg\nsaTNvoe1AgMBAAECggEAIirJqO5jX6UehoIzZK6sKJS1De5HQoSP74GudGEa70BQ\n6PEyOnQJcmI4JJBGmw6A3tdc4zzYcSVvX9ptEVFDz/J6NsSaBrtIE6XfVq40rsGR\nUQUF/uYEONX+GwvJHQVprn58zHUjmNqErV+BHTBMBnWHDMRFQ5UF/YPfGtz2qBSJ\nL9ZatMBZ46YbyF1XCqC9HTbfCXKrQ8OE5DsrEvXOFEnSuxMyWQUygsQ6XabFCnSF\nzy3c4hMhwMiHiajZNExJSYeKisypWEDONMDy2yvx+usWZV3LxZcylxfDoS9E8z0D\n6nVJzIDQ4jU7LLpAipB/FR0orgpUhBHt7y9ylS46gQKBgQDL2PSYFuWWPXhjdDd/\nwdYKYLbIIBJLAsWLWfBne9XrQHhAwRgFz5626VZCU4x3YbBLjdX+q/dzbxcwdUED\nETlgzxwJPLkuLmZ7EBT5fJW8PFvdWYp050NOwdiVrtzgo8z+ixDWT2VFz3ON5MXa\neH6kZ7LpFwA3NQXH4srC3a4F7QKBgQDIAbTqsETi8oVyF0fQDyZGJ9zngKAE8DAp\n+HOhkYncdrx9R/3vs6zuaxRK134M3JVifBaAgXQY/0elCv89zNAXv2Y63YqUD+FX\nYKdd5bH/W9/THpHMLIohc6e3w04gQlcZW9FJs1vGRW+6pd5zeOeb9ZwjQZ2kBORr\nihy+v8NP6QKBgFZKCo/u8VS9xJ5k7bFY/h/6fKUOXm/+Rl0Mv2Uu2IjzC3RtyJt9\nHbRT5b3B3C4U3im9ap6ZcPAeUHSkzdZcjitawIVwfPr9jUf+sMJDaKb77e8vHhsK\nYkWObP4/vSQicn41o/T0OuxoOoQQGWi3pPQ3KVbd86tq+H16lVYTvLypAoGAQzwH\npGlTDvO2Fm9rDa86D5Vw9kXQBTj1B/bkcCjrrjggDwF3hO/ir1dBwBMG5a31beEG\n83YRICIY5It42D6UqZcG97zny/Q2rVfpi3Ae0RgCewcovfkvCiXF+Mln5wJGI1kx\nVtQ7gsBu2dDOogS/3zbGoTd6ldurKdeI6DqwnpkCgYABjWmCHTTHJctrMk+QZKr3\nUGsOJRdD6UuLZ3yN1sCcMcbWiKD/IGU7SlP749qH8aNDYg3K0Dswc1QefEg1gPex\neTrc2+oDvpFKXp3yxDKEtPrseqeGVcBPJAKxjcvSOijLkQ137j+hbcq6nwjdFgWa\n50TbUn967d5qkaWghA9M5A==\n-----END PRIVATE KEY-----\n",
+  "private_key": `-----BEGIN PRIVATE KEY-----
+  MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCfQtr/MyH55CU1
+  sIDj2iSxbnDvhzIMmLKnr47JJoPUgaRBlgQlHLGIVUIJCePNZyCByeG/8MXFjRUk
+  9TzhvrEAL/ZDa3CVi5hFAZV1bmZYPS3bje3dHUMOY1Jj9Uv6JY6Z0lJ/fTJvZY3M
+  qFtqSSTnDB4MS8fq67V3sd0p86V9jTeVnDqox0DRBS4BpjFMuJPKtPlpOwdO7ECR
+  09FgIDfEdZ3cVHlEgdLGhN0rpPd717XTg2c3CLbRK6PMJcuO0wW8VZ9Bps+pKZG4
+  5UPeEhPYRVOw6/z4Lk51DWzacQhflemSa+zqjI+95MPhMNFq0775PmcUI0GGNpBg
+  saTNvoe1AgMBAAECggEAIirJqO5jX6UehoIzZK6sKJS1De5HQoSP74GudGEa70BQ
+  6PEyOnQJcmI4JJBGmw6A3tdc4zzYcSVvX9ptEVFDz/J6NsSaBrtIE6XfVq40rsGR
+  UQUF/uYEONX+GwvJHQVprn58zHUjmNqErV+BHTBMBnWHDMRFQ5UF/YPfGtz2qBSJ
+  L9ZatMBZ46YbyF1XCqC9HTbfCXKrQ8OE5DsrEvXOFEnSuxMyWQUygsQ6XabFCnSF
+  zy3c4hMhwMiHiajZNExJSYeKisypWEDONMDy2yvx+usWZV3LxZcylxfDoS9E8z0D
+  6nVJzIDQ4jU7LLpAipB/FR0orgpUhBHt7y9ylS46gQKBgQDL2PSYFuWWPXhjdDd/
+  wdYKYLbIIBJLAsWLWfBne9XrQHhAwRgFz5626VZCU4x3YbBLjdX+q/dzbxcwdUED
+  ETlgzxwJPLkuLmZ7EBT5fJW8PFvdWYp050NOwdiVrtzgo8z+ixDWT2VFz3ON5MXa
+  eH6kZ7LpFwA3NQXH4srC3a4F7QKBgQDIAbTqsETi8oVyF0fQDyZGJ9zngKAE8DAp
+  +HOhkYncdrx9R/3vs6zuaxRK134M3JVifBaAgXQY/0elCv89zNAXv2Y63YqUD+FX
+  YKdd5bH/W9/THpHMLIohc6e3w04gQlcZW9FJs1vGRW+6pd5zeOeb9ZwjQZ2kBORr
+  ihy+v8NP6QKBgFZKCo/u8VS9xJ5k7bFY/h/6fKUOXm/+Rl0Mv2Uu2IjzC3RtyJt9
+  HbRT5b3B3C4U3im9ap6ZcPAeUHSkzdZcjitawIVwfPr9jUf+sMJDaKb77e8vHhsK
+  YkWObP4/vSQicn41o/T0OuxoOoQQGWi3pPQ3KVbd86tq+H16lVYTvLypAoGAQzwH
+  pGlTDvO2Fm9rDa86D5Vw9kXQBTj1B/bkcCjrrjggDwF3hO/ir1dBwBMG5a31beEG
+  83YRICIY5It42D6UqZcG97zny/Q2rVfpi3Ae0RgCewcovfkvCiXF+Mln5wJGI1kx
+  VtQ7gsBu2dDOogS/3zbGoTd6ldurKdeI6DqwnpkCgYABjWmCHTTHJctrMk+QZKr3
+  UGsOJRdD6UuLZ3yN1sCcMcbWiKD/IGU7SlP749qH8aNDYg3K0Dswc1QefEg1gPex
+  eTrc2+oDvpFKXp3yxDKEtPrseqeGVcBPJAKxjcvSOijLkQ137j+hbcq6nwjdFgWa
+  50TbUn967d5qkaWghA9M5A==
+  -----END PRIVATE KEY-----`,
   "client_email": "firebase-adminsdk-fbsvc@project-8812136035477954307.iam.gserviceaccount.com",
   "client_id": "102286591606476992488",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -102,6 +126,7 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
