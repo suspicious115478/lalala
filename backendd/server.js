@@ -192,29 +192,31 @@ app.post('/sync', async (req, res) => {
     // ------------------- TIME FILTER LOGIC -------------------
     const now = new Date();
 
-    function parseTimeToToday(timeStr) {
-      const [time, modifier] = timeStr.split(" ");
-      let [hours, minutes] = time.split(":").map(Number);
+   // --- TIME + DATE MATCH in IST ---
+function parseISTDateTime(str) {
+  // example: "2025-12-17 10:00 AM"
+  const [date, time, modifier] = str.split(/[\s]+/);
 
-      if (modifier === "PM" && hours !== 12) hours += 12;
-      if (modifier === "AM" && hours === 12) hours = 0;
+  let [hours, minutes] = time.split(":").map(Number);
 
-      const localDate = new Date();
-      localDate.setHours(hours, minutes, 0, 0);
+  if (modifier === "PM" && hours !== 12) hours += 12;
+  if (modifier === "AM" && hours === 12) hours = 0;
 
-      // Convert LOCAL IST → UTC
-      return new Date(localDate.getTime() - 5.5 * 60 * 60 * 1000);
-    }
+  // This stays in IST (local date)
+  return new Date(`${date}T${hours.toString().padStart(2, "0")}:${minutes}:00+05:30`);
+}
 
-    const filtered = data.filter(row => {
-      if (!row.scheduled_time) return false;
+const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
 
-      const scheduled = parseTimeToToday(row.scheduled_time);
-      const diff = Math.abs(scheduled - now);
-      const oneHour = 60 * 60 * 1000;
+const filtered = data.filter(row => {
+  if (!row.scheduled_time) return false;
 
-      return diff <= oneHour;
-    });
+  const scheduled = parseISTDateTime(row.scheduled_time);
+  const diff = Math.abs(scheduled - nowIST);
+
+  return diff <= (60 * 60 * 1000);  // within 1 hour window
+});
+
 
     console.log(`[SYNC] 🟡 Rows after time filter: ${filtered.length}`);
 
@@ -317,6 +319,7 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
