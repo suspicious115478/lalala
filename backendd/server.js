@@ -192,43 +192,35 @@ app.post('/sync', async (req, res) => {
     // ------------------- TIME FILTER LOGIC -------------------
     const now = new Date();
 
-   // --- TIME + DATE MATCH in IST ---
-// ------------------ TIME + DATE MATCH in IST ------------------
-function parseISTDateTime(str) {
-  // input example: "2025-12-08 06:00 PM"
-  const parts = str.split(" ");
-  const date = parts[0];      // 2025-12-08
-  const time = parts[1];      // 06:00
-  const modifier = parts[2];  // PM
+    function parseTimeToToday(timeStr) {
+      const [time, modifier] = timeStr.split(" ");
+      let [hours, minutes] = time.split(":").map(Number);
 
-  let [hours, minutes] = time.split(":").map(Number);
+      if (modifier === "PM" && hours !== 12) hours += 12;
+      if (modifier === "AM" && hours === 12) hours = 0;
 
-  // convert to 24h clock
-  if (modifier === "PM" && hours !== 12) hours += 12;
-  if (modifier === "AM" && hours === 12) hours = 0;
+      const localDate = new Date();
+      localDate.setHours(hours, minutes, 0, 0);
 
-  // Construct full datetime in IST
-  const iso = `${date}T${hours.toString().padStart(2, "0")}:${minutes}:00+05:30`;
-  return new Date(iso);
-}
+      // Convert LOCAL IST → UTC
+      return new Date(localDate.getTime() - 5.5 * 60 * 60 * 1000);
+    }
 
-// current time in IST
-const nowIST = new Date(
-  new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-);
+    const filtered = data.filter(row => {
+      if (!row.scheduled_time) return false;
 
-// filter records within ±1 hour around scheduled_time (in IST)
-const filtered = data.filter(row => {
-  if (!row.scheduled_time) return false; // skip if no time
+      const scheduled = parseTimeToToday(row.scheduled_time);
+      const diff = Math.abs(scheduled - now);
+      const oneHour = 60 * 60 * 1000;
 
-  const scheduled = parseISTDateTime(row.scheduled_time);
+      return diff <= oneHour;
+    });
 
-  // difference in ms
-  const diff = Math.abs(scheduled - nowIST);
+    console.log(`[SYNC] 🟡 Rows after time filter: ${filtered.length}`);
 
-  // 1 hour = 3600000 ms
-  return diff <= 60 * 60 * 1000;
-});
+    if (filtered.length === 0) {
+      return res.json({ message: "No dispatches in the 1-hour window" });
+    }
 
    // ===================================================
 // 🔥 SINGLE MODE
@@ -325,8 +317,6 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
 
 
 
