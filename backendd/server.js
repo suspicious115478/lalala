@@ -230,10 +230,9 @@ if (mode === "single") {
 
   console.log("[FIREBASE] Writing SINGLE row to task_details/latest");
 
-  await db.ref(`dispatches/${admin_id}/task_details/latest`).set(latest);
+await db.ref(`dispatches/${admin_id}/0/task_details`).set(latest);
+await db.ref(`dispatches/${admin_id}/0/new_task`).set(true);
 
-  // Mark new task
-  await db.ref(`dispatches/${admin_id}/new_task`).set(true);
 
   // ----------------------------
   //  🔥 Update Supabase admin_id → Fd12
@@ -260,11 +259,10 @@ console.log("[FIREBASE] Writing ALL rows to task_details...");
 
 const updates = {};
 filtered.forEach((row, index) => {
-  updates[`dispatches/${admin_id}/task_details/${index}`] = row;
+  updates[`dispatches/${admin_id}/${index}/task_details`] = row;
+  updates[`dispatches/${admin_id}/${index}/new_task`] = true;
 });
 
-// mark new task
-updates[`dispatches/${admin_id}/new_task`] = true;
 
 await db.ref().update(updates);
 
@@ -304,6 +302,7 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
