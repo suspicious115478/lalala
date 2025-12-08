@@ -258,13 +258,28 @@ await db.ref(`dispatches/${admin_id}/0/new_task`).set(true);
 console.log("[FIREBASE] Writing ALL rows to task_details...");
 
 const updates = {};
-filtered.forEach((row, index) => {
+
+// ----- FIND LAST INDEX -----
+const snap = await db.ref(`dispatches/${admin_id}`).once("value");
+let startIndex = 0;
+
+if (snap.exists()) {
+  const keys = Object.keys(snap.val()).filter(k => !isNaN(k));
+  if (keys.length > 0) {
+    startIndex = Math.max(...keys.map(Number)) + 1;
+  }
+}
+
+// ----- WRITE -----
+filtered.forEach((row, i) => {
+  const index = startIndex + i;
   updates[`dispatches/${admin_id}/${index}/task_details`] = row;
   updates[`dispatches/${admin_id}/${index}/new_task`] = true;
 });
 
-
+// ----- PUSH -----
 await db.ref().update(updates);
+
 
 console.log("[FIREBASE] 🟢 Time-filtered rows synced");
 
@@ -302,6 +317,7 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
