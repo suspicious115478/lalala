@@ -178,7 +178,7 @@ app.post('/sync', async (req, res) => {
         customer_name,
         read_alert,
         dispatched_at,
-        schedule_time
+        scheduled_time
       `)
       .eq('admin_id', admin_id);
 
@@ -207,9 +207,9 @@ app.post('/sync', async (req, res) => {
     }
 
     const filtered = data.filter(row => {
-      if (!row.schedule_time) return false;
+      if (!row.scheduled_time) return false;
 
-      const scheduled = parseTimeToToday(row.schedule_time);
+      const scheduled = parseTimeToToday(row.scheduled_time);
       const diff = Math.abs(scheduled - now);
       const oneHour = 60 * 60 * 1000;
 
@@ -317,6 +317,7 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
