@@ -193,36 +193,42 @@ app.post('/sync', async (req, res) => {
     const now = new Date();
 
    // --- TIME + DATE MATCH in IST ---
+// ------------------ TIME + DATE MATCH in IST ------------------
 function parseISTDateTime(str) {
-  // example: "2025-12-17 10:00 AM"
-  const [date, time, modifier] = str.split(/[\s]+/);
+  // input example: "2025-12-08 06:00 PM"
+  const parts = str.split(" ");
+  const date = parts[0];      // 2025-12-08
+  const time = parts[1];      // 06:00
+  const modifier = parts[2];  // PM
 
   let [hours, minutes] = time.split(":").map(Number);
 
+  // convert to 24h clock
   if (modifier === "PM" && hours !== 12) hours += 12;
   if (modifier === "AM" && hours === 12) hours = 0;
 
-  // This stays in IST (local date)
-  return new Date(`${date}T${hours.toString().padStart(2, "0")}:${minutes}:00+05:30`);
+  // Construct full datetime in IST
+  const iso = `${date}T${hours.toString().padStart(2, "0")}:${minutes}:00+05:30`;
+  return new Date(iso);
 }
 
-const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+// current time in IST
+const nowIST = new Date(
+  new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+);
 
+// filter records within ±1 hour around scheduled_time (in IST)
 const filtered = data.filter(row => {
-  if (!row.scheduled_time) return false;
+  if (!row.scheduled_time) return false; // skip if no time
 
   const scheduled = parseISTDateTime(row.scheduled_time);
+
+  // difference in ms
   const diff = Math.abs(scheduled - nowIST);
 
-  return diff <= (60 * 60 * 1000);  // within 1 hour window
+  // 1 hour = 3600000 ms
+  return diff <= 60 * 60 * 1000;
 });
-
-
-    console.log(`[SYNC] 🟡 Rows after time filter: ${filtered.length}`);
-
-    if (filtered.length === 0) {
-      return res.json({ message: "No dispatches in the 1-hour window" });
-    }
 
    // ===================================================
 // 🔥 SINGLE MODE
@@ -319,6 +325,7 @@ app.get('/', (req, res) => res.send("Supabase → Firebase Sync Running"));
 // -------------- START SERVER -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 
 
